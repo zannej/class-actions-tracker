@@ -4,6 +4,7 @@ import os
 
 AIRTABLE_TOKEN = os.getenv('AIRTABLE_TOKEN')
 AIRTABLE_BASE_ID = os.getenv('AIRTABLE_BASE_ID')
+AIRTABLE_TABLE_ID = "tblXWhbrRNMWpq2m2"
 
 print("=" * 60)
 print("CLASS ACTIONS TRACKER - AIRTABLE SCRAPER")
@@ -13,7 +14,7 @@ def write_to_airtable(timestamp, description, count):
     """Write data to Airtable Raw_Scrapes table"""
     print(f"\n[WRITING] Adding entry to Airtable...")
     
-    url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/Raw_Scrapes"
+    url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{AIRTABLE_TABLE_ID}"
     
     headers = {
         "Authorization": f"Bearer {AIRTABLE_TOKEN}",
