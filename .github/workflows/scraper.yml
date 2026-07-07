@@ -1,6 +1,8 @@
 name: Run Scraper
 
 on:
+  schedule:
+    - cron: '0 9 * * 0'
   workflow_dispatch:
 
 jobs:
@@ -13,7 +15,6 @@ jobs:
         with:
           python-version: '3.11'
       
-      - run: pip install gspread google-auth-oauthlib google-auth-httplib2
+      - run: pip install gspread google-auth-oauthlib google-auth-httplib2 requests beautifulsoup4
       
       - run: python scraper.py
-
