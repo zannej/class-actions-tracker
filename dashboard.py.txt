@@ -1,0 +1,5 @@
+import streamlit as st
+
+st.title("Class Actions Tracker")
+st.write("Dashboard is loading...")
+st.info("This is your dashboard. More features coming soon!")
