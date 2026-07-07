@@ -2,7 +2,6 @@ import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 import requests
-from bs4 import BeautifulSoup
 
 SHEET_ID = "1t5JJwuzmmA3Ve6re946xVjXTHTEmz4uQqN1N8gHxhAU"
 
@@ -12,115 +11,87 @@ HEADERS = {
 
 def connect_sheet():
     """Connect to Google Sheet"""
-    creds = Credentials.from_service_account_file(
-        'credentials.json',
-        scopes=['https://www.googleapis.com/auth/spreadsheets']
-    )
-    gc = gspread.authorize(creds)
-    return gc.open_by_key(SHEET_ID)
-
-def scrape_federal_court():
-    """Scrape Federal Court - simplified"""
-    print("\n[1] Checking Federal Court...")
+    print("[STEP 1] Connecting to Google Sheets...")
     try:
-        url = "https://www.fedcourt.gov.au/law-and-practice/class-actions/class-actions"
-        response = requests.get(url, headers=HEADERS, timeout=10)
-        if response.status_code == 200:
-            print("    ✓ Federal Court website is accessible")
-            return 1
-        else:
-            print(f"    ✗ Got status code {response.status_code}")
-            return 0
-    except Exception as e:
-        print(f"    ✗ Error: {e}")
-        return 0
-
-def scrape_nsw_supreme_court():
-    """Scrape NSW Supreme Court - simplified"""
-    print("\n[2] Checking NSW Supreme Court...")
-    try:
-        url = "https://www.supremecourt.justice.nsw.gov.au/Pages/sco2_classactions/sco2_current_class_actions.aspx"
-        response = requests.get(url, headers=HEADERS, timeout=10)
-        if response.status_code == 200:
-            print("    ✓ NSW Supreme Court website is accessible")
-            return 1
-        else:
-            print(f"    ✗ Got status code {response.status_code}")
-            return 0
-    except Exception as e:
-        print(f"    ✗ Error: {e}")
-        return 0
-
-def scrape_vic_supreme_court():
-    """Scrape VIC Supreme Court - simplified"""
-    print("\n[3] Checking VIC Supreme Court...")
-    try:
-        url = "https://www.supremecourt.vic.gov.au/areas/group-proceedings"
-        response = requests.get(url, headers=HEADERS, timeout=10)
-        if response.status_code == 200:
-            print("    ✓ VIC Supreme Court website is accessible")
-            return 1
-        else:
-            print(f"    ✗ Got status code {response.status_code}")
-            return 0
-    except Exception as e:
-        print(f"    ✗ Error: {e}")
-        return 0
-
-def scrape_lawyerly():
-    """Scrape Lawyerly - simplified"""
-    print("\n[4] Checking Lawyerly...")
-    try:
-        url = "https://www.lawyerly.com.au/category/practice-areas/class-actions/"
-        response = requests.get(url, headers=HEADERS, timeout=10)
-        if response.status_code == 200:
-            print("    ✓ Lawyerly website is accessible")
-            return 1
-        else:
-            print(f"    ✗ Got status code {response.status_code}")
-            return 0
-    except Exception as e:
-        print(f"    ✗ Error: {e}")
-        return 0
-
-def main():
-    """Main scraper function"""
-    print("=" * 60)
-    print("CLASS ACTIONS TRACKER SCRAPER")
-    print("=" * 60)
-    
-    # Test all sources
-    fed_count = scrape_federal_court()
-    nsw_count = scrape_nsw_supreme_court()
-    vic_count = scrape_vic_supreme_court()
-    lawyerly_count = scrape_lawyerly()
-    
-    total = fed_count + nsw_count + vic_count + lawyerly_count
-    
-    print(f"\n{'=' * 60}")
-    print(f"Sources checked: {total}/4 accessible")
-    print(f"{'=' * 60}")
-    
-    # Write to Raw_Scrapes tab
-    try:
-        print("\n[WRITING] Connecting to Google Sheet...")
-        sheet = connect_sheet()
-        raw_scrapes = sheet.worksheet('Raw_Scrapes')
+        creds = Credentials.from_service_account_file(
+            'credentials.json',
+            scopes=['https://www.googleapis.com/auth/spreadsheets']
+        )
+        print("  ✓ Credentials loaded")
         
-        timestamp = datetime.now().isoformat()
-        raw_scrapes.append_row([
-            timestamp,
-            f"Scraper check - {total}/4 sources accessible",
-            total
-        ])
+        gc = gspread.authorize(creds)
+        print("  ✓ Authorized")
         
-        print("✓ Data written to Raw_Scrapes")
-        print("✓ SCRAPER COMPLETED SUCCESSFULLY!")
+        sheet = gc.open_by_key(SHEET_ID)
+        print(f"  ✓ Sheet opened: {sheet.title}")
         
+        return sheet
     except Exception as e:
-        print(f"✗ Failed to write to sheet: {e}")
+        print(f"  ✗ ERROR: {e}")
         import traceback
         traceback.print_exc()
+        return None
+
+def get_raw_scrapes_tab(sheet):
+    """Get the Raw_Scrapes worksheet"""
+    print("\n[STEP 2] Getting Raw_Scrapes worksheet...")
+    try:
+        raw_scrapes = sheet.worksheet('Raw_Scrapes')
+        print("  ✓ Raw_Scrapes tab found")
+        return raw_scrapes
+    except Exception as e:
+        print(f"  ✗ ERROR: {e}")
+        print("  Available worksheets:")
+        for ws in sheet.worksheets():
+            print(f"    - {ws.title}")
+        return None
+
+def write_test_data(raw_scrapes):
+    """Write test data to Raw_Scrapes"""
+    print("\n[STEP 3] Writing test data...")
+    try:
+        timestamp = datetime.now().isoformat()
+        row_data = [timestamp, "Test from full scraper", "1"]
+        
+        print(f"  Data to write: {row_data}")
+        raw_scrapes.append_row(row_data)
+        print("  ✓ Data written successfully!")
+        return True
+    except Exception as e:
+        print(f"  ✗ ERROR writing data: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+def main():
+    """Main function"""
+    print("=" * 60)
+    print("SCRAPER DEBUG TEST")
+    print("=" * 60)
+    
+    # Step 1: Connect to sheet
+    sheet = connect_sheet()
+    if sheet is None:
+        print("\n✗ FAILED: Could not connect to sheet")
+        return
+    
+    # Step 2: Get Raw_Scrapes tab
+    raw_scrapes = get_raw_scrapes_tab(sheet)
+    if raw_scrapes is None:
+        print("\n✗ FAILED: Could not find Raw_Scrapes tab")
+        return
+    
+    # Step 3: Write test data
+    success = write_test_data(raw_scrapes)
+    
+    if success:
+        print("\n" + "=" * 60)
+        print("✓✓✓ SUCCESS! Check your Google Sheet ✓✓✓")
+        print("=" * 60)
+    else:
+        print("\n" + "=" * 60)
+        print("✗✗✗ FAILED ✗✗✗")
+        print("=" * 60)
 
 if __name__ == "__main__":
     main()
