@@ -16,5 +16,4 @@ jobs:
       - run: pip install gspread google-auth-oauthlib google-auth-httplib2
       
       - run: python scraper.py
-        env:
-          GOOGLE_CREDS: ${{ secrets.GOOGLE_CREDS }}
+
