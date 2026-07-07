@@ -1,61 +1,88 @@
-import gspread
-from google.oauth2.service_account import Credentials
+import requests
 from datetime import datetime
-import sys
+import os
+
+AIRTABLE_TOKEN = os.getenv('AIRTABLE_TOKEN')
+AIRTABLE_BASE_ID = os.getenv('AIRTABLE_BASE_ID')
 
 print("=" * 60)
-print("SCRAPER WITH ERROR DETAILS")
+print("CLASS ACTIONS TRACKER - AIRTABLE SCRAPER")
 print("=" * 60)
 
+def write_to_airtable(timestamp, description, count):
+    """Write data to Airtable Raw_Scrapes table"""
+    print(f"\n[WRITING] Adding entry to Airtable...")
+    
+    url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/Raw_Scrapes"
+    
+    headers = {
+        "Authorization": f"Bearer {AIRTABLE_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    
+    data = {
+        "records": [
+            {
+                "fields": {
+                    "Timestamp": timestamp,
+                    "Description": description,
+                    "Count": count
+                }
+            }
+        ]
+    }
+    
+    try:
+        response = requests.post(url, json=data, headers=headers)
+        
+        if response.status_code == 200:
+            print(f"  ✓ Success!")
+            print(f"  Timestamp: {timestamp}")
+            print(f"  Description: {description}")
+            return True
+        else:
+            print(f"  ✗ Error: {response.status_code}")
+            print(f"  Response: {response.text}")
+            return False
+    except Exception as e:
+        print(f"  ✗ Error: {e}")
+        return False
+
+# Main
 try:
-    print("\n[1] Loading credentials.json...")
-    creds = Credentials.from_service_account_file(
-        'credentials.json',
-        scopes=['https://www.googleapis.com/auth/spreadsheets']
-    )
-    print("    ✓ Success")
+    print("\n[CHECK] Verifying credentials...")
     
-    print("\n[2] Authorizing with gspread...")
-    gc = gspread.authorize(creds)
-    print("    ✓ Success")
+    if not AIRTABLE_TOKEN:
+        print("  ✗ AIRTABLE_TOKEN not found!")
+        exit(1)
     
-    print("\n[3] Opening Google Sheet...")
-    sheet = gc.open_by_key("1t5JJwuzmmA3Ve6re946xVjXTHTEmz4uQqN1N8gHxhAU")
-    print(f"    ✓ Success - Sheet: {sheet.title}")
+    if not AIRTABLE_BASE_ID:
+        print("  ✗ AIRTABLE_BASE_ID not found!")
+        exit(1)
     
-    print("\n[4] Getting worksheet list...")
-    worksheets = sheet.worksheets()
-    print(f"    Found {len(worksheets)} worksheets:")
-    for ws in worksheets:
-        print(f"      - {ws.title}")
+    print("  ✓ Credentials found")
     
-    print("\n[5] Getting Raw_Scrapes worksheet...")
-    raw_scrapes = sheet.worksheet('Raw_Scrapes')
-    print(f"    ✓ Success - Title: {raw_scrapes.title}")
-    
-    print("\n[6] Preparing data...")
+    # Write test entry
     timestamp = datetime.now().isoformat()
-    row_data = [timestamp, "Test entry", "1"]
-    print(f"    ✓ Data: {row_data}")
+    success = write_to_airtable(
+        timestamp=timestamp,
+        description="Scraper test run - Airtable working!",
+        count=1
+    )
     
-    print("\n[7] Appending row to worksheet...")
-    result = raw_scrapes.append_row(row_data)
-    print(f"    ✓ Success - Result: {result}")
-    
-    print("\n" + "=" * 60)
-    print("✓✓✓ EVERYTHING WORKED ✓✓✓")
-    print("=" * 60)
-    print("\nIf you don't see data in your sheet, there may be a")
-    print("permission or sharing issue. Check your Sheet sharing settings.")
-    
-except gspread.exceptions.APIError as e:
-    print(f"\n✗ GSPREAD API ERROR: {e}")
-    print(f"   Error code: {e.response.status_code}")
-    print(f"   Error message: {e.response.text}")
-    sys.exit(1)
-    
+    if success:
+        print("\n" + "=" * 60)
+        print("✓✓✓ SCRAPER COMPLETED SUCCESSFULLY ✓✓✓")
+        print("=" * 60)
+        print("\nCheck your Airtable Raw_Scrapes table!")
+    else:
+        print("\n" + "=" * 60)
+        print("✗ SCRAPER FAILED")
+        print("=" * 60)
+        exit(1)
+
 except Exception as e:
-    print(f"\n✗ ERROR: {type(e).__name__}: {e}")
+    print(f"\n✗ ERROR: {e}")
     import traceback
     traceback.print_exc()
-    sys.exit(1)
+    exit(1)
