@@ -3,58 +3,92 @@ from google.oauth2.service_account import Credentials
 import json
 import os
 from datetime import datetime
+import sys
 
 print("=" * 60)
-print("CLASS ACTIONS TRACKER SCRAPER")
+print("SCRAPER DEBUG MODE")
 print("=" * 60)
 
-SHEET_ID = "1t5JJwuzmmA3Ve6re946xVjXTHTEmz4uQqN1N8gHxhAU" 
+SHEET_ID = "1t5JJwuzmmA3Ve6re946xVjXTHTEmz4uQqN1N8gHxhAU"  # Replace with your actual Sheet ID
 
 try:
-    print("\n[1] Setting up credentials...")
+    print("\n[CHECK 1] Environment Variables")
+    print(f"  GOOGLE_CREDS set: {bool(os.getenv('GOOGLE_CREDS'))}")
     creds_json = os.getenv('GOOGLE_CREDS')
     
-    if creds_json:
-        print("    ✓ Using environment credentials")
+    if not creds_json:
+        print("  ✗ GOOGLE_CREDS not found!")
+        sys.exit(1)
+    
+    print("\n[CHECK 2] Parsing Credentials JSON")
+    try:
         creds_dict = json.loads(creds_json)
+        print(f"  ✓ JSON parsed successfully")
+        print(f"  Project ID: {creds_dict.get('project_id')}")
+        print(f"  Client Email: {creds_dict.get('client_email')}")
+    except json.JSONDecodeError as e:
+        print(f"  ✗ JSON parsing failed: {e}")
+        sys.exit(1)
+    
+    print("\n[CHECK 3] Creating Credentials Object")
+    try:
         creds = Credentials.from_service_account_info(
             creds_dict,
             scopes=['https://www.googleapis.com/auth/spreadsheets']
         )
-    else:
-        print("    ✓ Using local credentials.json")
-        creds = Credentials.from_service_account_file(
-            'credentials.json',
-            scopes=['https://www.googleapis.com/auth/spreadsheets']
-        )
+        print("  ✓ Credentials object created")
+    except Exception as e:
+        print(f"  ✗ Failed to create credentials: {e}")
+        sys.exit(1)
     
-    print("\n[2] Connecting to Google Sheet...")
-    gc = gspread.authorize(creds)
-    sheet = gc.open_by_key(SHEET_ID)
-    print(f"    ✓ Connected to: {sheet.title}")
+    print("\n[CHECK 4] Authorizing with Google Sheets")
+    try:
+        gc = gspread.authorize(creds)
+        print("  ✓ Authorization successful")
+    except Exception as e:
+        print(f"  ✗ Authorization failed: {e}")
+        sys.exit(1)
     
-    print("\n[3] Accessing Raw_Scrapes tab...")
-    raw_scrapes_tab = sheet.worksheet('Raw_Scrapes')
-    print("    ✓ Raw_Scrapes tab found")
+    print("\n[CHECK 5] Opening Sheet")
+    print(f"  Sheet ID: {SHEET_ID}")
+    try:
+        sheet = gc.open_by_key(SHEET_ID)
+        print(f"  ✓ Sheet opened: {sheet.title}")
+    except Exception as e:
+        print(f"  ✗ Failed to open sheet: {e}")
+        print(f"  Make sure you shared the sheet with: {creds_dict.get('client_email')}")
+        sys.exit(1)
     
-    print("\n[4] Adding scrape record...")
-    timestamp = datetime.now().isoformat()
-    raw_scrapes_tab.append_row([
-        timestamp,
-        "Automated scraper run - test entry",
-        "1"
-    ])
-    print(f"    ✓ Record added at: {timestamp}")
+    print("\n[CHECK 6] Finding Raw_Scrapes Worksheet")
+    try:
+        raw_scrapes_tab = sheet.worksheet('Raw_Scrapes')
+        print("  ✓ Raw_Scrapes worksheet found")
+    except Exception as e:
+        print(f"  ✗ Raw_Scrapes worksheet not found: {e}")
+        print("  Available worksheets:")
+        for ws in sheet.worksheets():
+            print(f"    - {ws.title}")
+        sys.exit(1)
+    
+    print("\n[CHECK 7] Writing Test Data")
+    try:
+        timestamp = datetime.now().isoformat()
+        row_data = [timestamp, "Test from scraper", "1"]
+        print(f"  Data to write: {row_data}")
+        raw_scrapes_tab.append_row(row_data)
+        print(f"  ✓ Data written successfully")
+    except Exception as e:
+        print(f"  ✗ Failed to write data: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
     
     print("\n" + "=" * 60)
-    print("✓✓✓ SCRAPER COMPLETED SUCCESSFULLY ✓✓✓")
+    print("✓✓✓ ALL CHECKS PASSED ✓✓✓")
     print("=" * 60)
-    print("\nNext steps:")
-    print("  1. Check your Google Sheet Raw_Scrapes tab")
-    print("  2. You should see a new row with today's timestamp")
-    print("  3. Scraper will run automatically every fortnight")
     
 except Exception as e:
-    print(f"\n✗ ERROR: {e}")
+    print(f"\n✗ UNEXPECTED ERROR: {e}")
     import traceback
     traceback.print_exc()
+    sys.exit(1)
