@@ -1,0 +1,20 @@
+name: Run Scraper
+
+on:
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - run: pip install gspread google-auth-oauthlib google-auth-httplib2
+      
+      - run: python scraper.py
+        env:
+          GOOGLE_CREDS: ${{ secrets.GOOGLE_CREDS }}
